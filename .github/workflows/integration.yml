@@ -1,0 +1,78 @@
+name: Integration Check
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: attendance_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+      - name: Get attendance-system
+        uses: actions/checkout@v4
+        with:
+          repository: ashutoshsinghniten-cyber/AttendanceSystem-RestTemplate
+          ref: ${{ github.repository == 'ashutoshsinghniten-cyber/AttendanceSystem-RestTemplate' && github.sha || 'main' }}
+          path: attendance-system
+          token: ${{ secrets.OTHER_REPO_TOKEN || github.token }}
+
+      - name: Get api-proxy
+        uses: actions/checkout@v4
+        with:
+          repository: ashutoshsinghniten-cyber/ProxyAttendance-RestTemplate
+          ref: ${{ github.repository == 'ashutoshsinghniten-cyber/ProxyAttendance-RestTemplate' && github.sha || 'main' }}
+          path: api-proxy
+          token: ${{ secrets.OTHER_REPO_TOKEN || github.token }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build both
+        run: |
+          mvn -B -q package -DskipTests --file attendance-system/pom.xml
+          mvn -B -q package -DskipTests --file api-proxy/pom.xml
+
+      - name: Start both services
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/attendance_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root
+        run: |
+          nohup java -jar attendance-system/target/*.jar > attendance.log 2>&1 &
+          nohup java -jar api-proxy/target/*.jar > proxy.log 2>&1 &
+
+      - name: Call attendance-system through the proxy
+        run: |
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/employees || true)
+            echo "attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 3
+          done
+          echo "Proxy could not get a good answer from attendance-system"
+          exit 1
+
+      - name: Show logs if it failed
+        if: failure()
+        run: |
+          echo "--- attendance ---"; tail -50 attendance.log
+          echo "--- proxy ---"; tail -50 proxy.log
