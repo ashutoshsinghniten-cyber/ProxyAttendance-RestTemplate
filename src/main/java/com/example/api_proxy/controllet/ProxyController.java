@@ -76,6 +76,8 @@ public class ProxyController {
                         .map(v -> v.startsWith(targetUrl) ? proxyBase + v.substring(targetUrl.length()) : v)
                         .toList();
                 out.put(name, rewritten);
+
+                //hrlpppp
             } else {
                 out.put(name, values);
             }
