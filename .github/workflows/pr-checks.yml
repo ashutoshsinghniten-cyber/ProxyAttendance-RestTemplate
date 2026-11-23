@@ -10,10 +10,6 @@ concurrency:
   group: pr-checks-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  pull-requests: read
-
 env:
   JAVA_VERSION: '21'          # use '21' in the proxy repo
 
@@ -21,6 +17,8 @@ jobs:
   format:
     name: Code format
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
         with:
@@ -36,6 +34,9 @@ jobs:
   build-test:
     name: Build, tests & SonarQube
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
@@ -65,6 +66,8 @@ jobs:
   docker:
     name: Docker build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
       - name: Lint Dockerfile (hadolint)
