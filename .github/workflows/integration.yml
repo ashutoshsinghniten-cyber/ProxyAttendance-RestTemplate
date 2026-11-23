@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Get attendance-system
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ashutoshsinghniten-cyber/AttendanceSystem-RestTemplate
           ref: ${{ github.repository == 'ashutoshsinghniten-cyber/AttendanceSystem-RestTemplate' && github.sha || 'main' }}
@@ -34,7 +34,7 @@ jobs:
           token: ${{ secrets.OTHER_REPO_TOKEN || github.token }}
 
       - name: Get api-proxy
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ashutoshsinghniten-cyber/ProxyAttendance-RestTemplate
           ref: ${{ github.repository == 'ashutoshsinghniten-cyber/ProxyAttendance-RestTemplate' && github.sha || 'main' }}
